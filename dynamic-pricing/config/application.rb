@@ -40,5 +40,9 @@ module Interview
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Central configuration is loaded via ConfigManager in
+    # config/initializers/config_manager.rb
+
   end
 end

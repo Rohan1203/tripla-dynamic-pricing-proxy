@@ -60,4 +60,18 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+  log_file = File.open(Rails.root.join("log/application.log"), "a")
+  log_file.sync = true
+  config.logger = ActiveSupport::Logger.new(log_file)
+  config.logger.formatter = proc do |severity, datetime, progname, msg|
+    {
+      time: datetime.to_s,
+      level: severity,
+      progname: progname,
+      message: msg
+    }.to_json + "\n"
+  end
+
 end
+
+
