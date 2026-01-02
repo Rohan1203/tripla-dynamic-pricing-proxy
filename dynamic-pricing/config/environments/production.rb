@@ -41,10 +41,25 @@ Rails.application.configure do
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = true
 
-  # Log to STDOUT by default
-  config.logger = ActiveSupport::Logger.new(STDOUT)
-    .tap  { |logger| logger.formatter = ::Logger::Formatter.new }
-    .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
+  # Log to file
+  log_file = File.open(Rails.root.join("log/application.log"), "a")
+  log_file.sync = true
+  config.logger = ActiveSupport::Logger.new(log_file)
+  config.logger.formatter = proc do |severity, datetime, progname, msg|
+    caller_info = caller.find { |c| c.include?('/app/') }
+    file = caller_info ? File.basename(caller_info.split(':').first) : nil
+    line = caller_info ? caller_info[/:\d+:/][1..-2] : nil
+    {
+      time: datetime.to_s,
+      level: severity,
+      logger_name: Rails.env,
+      file: file,
+      line: line,
+      thread_id: Thread.current.object_id,
+      message: msg
+    }.to_json + "\n"
+  end
+  config.logger = ActiveSupport::TaggedLogging.new(config.logger)
 
   # Prepend all log lines with the following tags.
   config.log_tags = [ :request_id ]
@@ -78,4 +93,13 @@ Rails.application.configure do
   # ]
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  # Rate retriever configuration
+  config.rate_api = { host: "http://localhost:8080/pricing", token: "" }
+  config.retry = { count: 3, backoff: 1 }
+  config.batch = { interval: 5 }
+
+  # Redis TTL configuration (in seconds)
+  config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds  for rates, 1 hour default
+
 end

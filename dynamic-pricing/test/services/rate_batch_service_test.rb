@@ -4,7 +4,7 @@ require "net/http"
 
 
 
-class RateRetrieverServiceTest < ActiveSupport::TestCase
+class RateBatchServiceTest < ActiveSupport::TestCase
   test "call sends request with correct payload" do
     payload_check = ->(request) do
       body = JSON.parse(request.body)

@@ -4,7 +4,7 @@
 Rails.application.config.after_initialize do
   if defined?(Rails::Server) || defined?(Puma)
     Rails.logger.debug "Initializing rate retrieval background task"
-    RateRetrievalLoop.start_async
+    RateRetrieverBatch.start_async
   end
 end
 

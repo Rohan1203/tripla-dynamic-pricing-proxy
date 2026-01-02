@@ -60,17 +60,33 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
-  log_file = File.open(Rails.root.join("log/application.log"), "a")
+  log_file = File.open(Rails.root.join("log/application_#{Rails.env}.log"), "a")
   log_file.sync = true
   config.logger = ActiveSupport::Logger.new(log_file)
   config.logger.formatter = proc do |severity, datetime, progname, msg|
+    caller_info = caller.find { |c| c.include?('/app/') }
+    file = caller_info ? File.basename(caller_info.split(':').first) : nil
+    line = caller_info ? caller_info[/:\d+:/][1..-2] : nil
     {
       time: datetime.to_s,
       level: severity,
-      progname: progname,
+      logger_name: Rails.env,
+      file: file,
+      line: line,
+      thread_id: Thread.current.object_id,
       message: msg
     }.to_json + "\n"
   end
+
+  # Rate retriever configuration
+  config.rate_api = { host: "http://localhost:8080/pricing", token: "04aa6f42aa03f220c2ae9a276cd68c62" }
+  config.retry = { count: 3, backoff: 1 }
+  config.batch = { interval: 5 }
+
+  # Redis TTL configuration (in seconds)
+  config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds for rates, 1 hour default
+
+
 
 end
 

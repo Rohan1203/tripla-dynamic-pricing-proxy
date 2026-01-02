@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  rate-api:
+    image: tripladev/rate-api
+    container_name: rate-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+      # Adjust these if your app expects different env names
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+    ports:
+      - "6379:6379" # optional; remove if Redis should not be exposed
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  redis-ui:
+    image: redis/redisinsight:latest
+    container_name: redis-ui
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    volumes:
+      - redisinsight-data:/db
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  redisinsight-data:

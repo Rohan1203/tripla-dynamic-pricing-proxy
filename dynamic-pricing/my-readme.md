@@ -1,0 +1,6 @@
+- docker compose for /pricing service and redis(with ui)
+- batch for the background bulk fetch from the /pricing service to minimize the api calls
+    - bulk push to redis
+- redis integration for caching
+    - Built-in health monitoring and connection testing
+    - Efficient connection management with configurable pool size
