@@ -96,10 +96,22 @@ Rails.application.configure do
 
   # Rate retriever configuration
   config.rate_api = { host: "http://localhost:8080/pricing", token: "" }
-  config.retry = { count: 3, backoff: 1 }
-  config.batch = { interval: 5 }
+  config.retry = { count: 3, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 30 }
+  config.batch = {
+    interval: ENV.fetch('BATCH_INTERVAL', 5).to_i,
+    failure_interval: ENV.fetch('BATCH_FAILURE_INTERVAL', 1).to_i
+  }
 
-  # Redis TTL configuration (in seconds)
+  # Upstream health check configuration
+  config.upstream_health_check = { check_timeout_seconds: 5, check_interval_seconds: 30 }
+
+  # Pricing behaviour tuning (can be overridden via environment variables if needed)
+  config.pricing = {
+    db_max_age_seconds:      30,
+    refresh_window_seconds:  5
+  }
+
+  # Redis TTL configuration (in seconds)2
   config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds  for rates, 1 hour default
 
 end

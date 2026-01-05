@@ -2,17 +2,26 @@ require "test_helper"
 
 class PricingControllerTest < ActionDispatch::IntegrationTest
   test "should get pricing with all parameters" do
-    get pricing_url, params: {
-      period: "Summer",
-      hotel: "FloatingPointResort",
-      room: "SingletonRoom"
+    expected_payload = {
+      "period" => "Summer",
+      "hotel"  => "FloatingPointResort",
+      "room"   => "SingletonRoom",
+      "rate"   => "12000"
     }
 
-    assert_response :success
-    assert_equal "application/json", @response.media_type
+    PricingService.stub(:call, expected_payload) do
+      get pricing_url, params: {
+        period: "Summer",
+        hotel: "FloatingPointResort",
+        room: "SingletonRoom"
+      }
 
-    json_response = JSON.parse(@response.body)
-    assert_equal "12000", json_response["rate"]
+      assert_response :success
+      assert_equal "application/json", @response.media_type
+
+      json_response = JSON.parse(@response.body)
+      assert_equal "12000", json_response["rate"]
+    end
   end
 
   test "should return error without any parameters" do

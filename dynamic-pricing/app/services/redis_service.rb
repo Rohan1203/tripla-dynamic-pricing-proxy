@@ -33,9 +33,21 @@ class RedisService
       raise ConnectionError, "Failed to initialize Redis connection pool: #{e.message}"
     end
 
-    # Get the connection pool
+    # Get the connection pool, lazily initializing it if needed.
+    # This makes the system more robust when the Redis initializer failed once
+    # (e.g. Redis was down at boot) or when running in non-server contexts.
     def pool
-      @pool || raise(ConnectionError, "Redis pool not initialized. Call RedisService.initialize_pool first.")
+      return @pool if @pool
+
+      Rails.logger.warn("[pricing] Redis pool not initialized; attempting lazy initialization")
+      begin
+        config = @config || load_config_from_file
+        initialize_pool(config)
+        @pool
+      rescue StandardError => e
+        Rails.logger.error("[pricing] Lazy Redis pool initialization failed: #{e.class} - #{e.message}")
+        raise ConnectionError, "Redis pool not initialized and lazy initialization failed: #{e.message}"
+      end
     end
 
     # Ping Redis to check connection
@@ -239,6 +251,26 @@ class RedisService
     rescue StandardError => e
       Rails.logger.error("Redis operation error: #{e.class} - #{e.message}")
       raise RedisError, "Redis operation failed: #{e.message}"
+    end
+
+    # Load Redis configuration from config/redis.yml for the current Rails.env
+    # Used for lazy pool initialization when @config is not set.
+    def load_config_from_file
+      require 'yaml'
+      require 'erb'
+
+      path = Rails.root.join('config', 'redis.yml')
+      unless File.exist?(path)
+        raise ConnectionError, "Redis configuration file not found at #{path}"
+      end
+
+      raw       = YAML.load(ERB.new(File.read(path)).result)
+      env_conf  = raw[Rails.env] || {}
+      env_conf.transform_keys!(&:to_sym)
+      env_conf
+    rescue StandardError => e
+      Rails.logger.error("[pricing] Failed to load Redis config from file: #{e.class} - #{e.message}")
+      raise ConnectionError, "Failed to load Redis configuration: #{e.message}"
     end
 
     # Generate a composite key for rate storage

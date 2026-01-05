@@ -15,9 +15,7 @@ class RateBatchServiceTest < ActiveSupport::TestCase
       true
     end
 
-    response_mock = Minitest::Mock.new
-    response_mock.expect :code, "200"
-    response_mock.expect :body, "{\"rates\": []}"
+    response_mock = Struct.new(:code, :body).new("200", "{\"rates\": []}")
 
     Net::HTTP.stub :new, ->(host, port) {
       http_mock = Minitest::Mock.new
@@ -26,7 +24,7 @@ class RateBatchServiceTest < ActiveSupport::TestCase
       end
       http_mock
     } do
-      RateRetrieverService.call
+      PricingBatchService.call
     end
   end
 end

@@ -37,6 +37,11 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
+  # Reduce log volume during tests
+  config.log_level = :warn
+  config.active_record.logger = nil
+  config.action_view.logger   = nil
+
   # Raise exceptions for disallowed deprecations.
   config.active_support.disallowed_deprecation = :raise
 
@@ -71,9 +76,17 @@ Rails.application.configure do
   end
 
   # Rate retriever configuration
-  config.rate_api = { host: "http://localhost:8080/pricing", token: "" }
+  config.rate_api = { host: "http://localhost:8080/pricing", token: "04aa6f42aa03f220c2ae9a276cd68c62" }
   config.retry = { count: 1, backoff: 0 }
   config.batch = { interval: 5 }
+
+  # Pricing behaviour tuning (shorter windows in test for faster feedback)
+  config.pricing = {
+    db_max_age_seconds:      10,
+    refresh_window_seconds:  1
+  }
+
+  config.upstream_health_check = { timeout: 5, interval: 15 } #seconds
 
   # Redis TTL configuration (in seconds)
   config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes for rates, 1 hour default
