@@ -6,6 +6,8 @@ require "active_support/core_ext/integer/time"
 # and recreated between test runs. Don't rely on the data there!
 
 Rails.application.configure do
+  # Ensure Redis password for test environment (used by config/redis.yml)
+  ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.
@@ -77,8 +79,10 @@ Rails.application.configure do
 
   # Rate retriever configuration
   config.rate_api = { host: "http://localhost:8080/pricing", token: "04aa6f42aa03f220c2ae9a276cd68c62" }
-  config.retry = { count: 1, backoff: 0 }
-  config.batch = { interval: 5 }
+  # Retry/circuit tuning: number of attempts per cycle, base backoff and multiplier.
+  # Cycle backoff is derived as base_backoff_seconds * (backoff_multiplier ** count).
+  config.retry = { count: 1, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 10 }
+  config.batch = { interval: 5, failure_interval: 1 }
 
   # Pricing behaviour tuning (shorter windows in test for faster feedback)
   config.pricing = {
@@ -86,7 +90,8 @@ Rails.application.configure do
     refresh_window_seconds:  1
   }
 
-  config.upstream_health_check = { timeout: 5, interval: 15 } #seconds
+  # Upstream health check configuration (seconds)
+  config.upstream_health_check = { check_timeout_seconds: 5, check_interval_seconds: 15, failure_threshold: 3, open_ttl_seconds: 60, path: '/' }
 
   # Redis TTL configuration (in seconds)
   config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes for rates, 1 hour default

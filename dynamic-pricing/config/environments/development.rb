@@ -1,6 +1,8 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Ensure Redis password for local development (used by config/redis.yml)
+  ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
   # Settings specified here will take precedence over those in config/application.rb.
 
   # In the development environment your application's code is reloaded any time
@@ -95,7 +97,7 @@ Rails.application.configure do
     refresh_window_seconds:   5  # coalescing window for upstream refreshes
   }
 
-  config.upstream_health_check = { check_timeout_seconds: 15, check_interval_seconds: 30 }
+  config.upstream_health_check = { check_timeout_seconds: 30, check_interval_seconds: 15, path: '/' }
 
   # Redis TTL configuration (in seconds)
   config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds for rates, 1 hour default

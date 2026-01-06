@@ -106,23 +106,6 @@ class RedisService
       nil
     end
 
-    # Retrieve all rates
-    def get_all_rates
-      with_redis do |redis|
-        data = redis.get('rates:all')
-        return nil unless data
-
-        rates = JSON.parse(data)
-        Rails.logger.debug("Retrieved #{rates.size} rates from Redis")
-        rates
-      end
-    rescue JSON::ParserError => e
-      Rails.logger.error("Failed to parse rates from Redis: #{e.message}")
-      nil
-    rescue StandardError => e
-      Rails.logger.error("Failed to retrieve all rates from Redis: #{e.message}")
-      nil
-    end
 
     # Check if rates are still fresh (within TTL)
     def rates_fresh?
@@ -143,53 +126,8 @@ class RedisService
       false
     end
 
-    # Delete specific rate
-    def delete_rate(period:, hotel:, room:)
-      key = rate_key(period, hotel, room)
-      
-      with_redis do |redis|
-        result = redis.del(key)
-        Rails.logger.debug("Deleted rate from Redis: #{key}")
-        result > 0
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to delete rate from Redis: #{e.message}")
-      false
-    end
 
-    # Clear all rates
-    def clear_all_rates
-      with_redis do |redis|
-        keys = redis.keys('rate:*')
-        return 0 if keys.empty?
-
-        result = redis.del(*keys)
-        redis.del('rates:all', 'rates:last_updated')
-        
-        Rails.logger.info("Cleared #{result} rate keys from Redis")
-        result
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to clear rates from Redis: #{e.message}")
-      0
-    end
-
-    # Generic key-value operations with TTL
-    def set(key, value, ttl: nil)
-      ttl ||= Rails.application.config.redis_ttl[:default]
-      with_redis do |redis|
-        if ttl
-          redis.setex(key, ttl, serialize_value(value))
-        else
-          redis.set(key, serialize_value(value))
-        end
-        true
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to set key '#{key}' in Redis: #{e.message}")
-      false
-    end
-
+    # Generic key-value retrieval
     def get(key)
       with_redis do |redis|
         value = redis.get(key)
@@ -198,41 +136,6 @@ class RedisService
     rescue StandardError => e
       Rails.logger.error("Failed to get key '#{key}' from Redis: #{e.message}")
       nil
-    end
-
-    def delete(key)
-      with_redis do |redis|
-        redis.del(key) > 0
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to delete key '#{key}' from Redis: #{e.message}")
-      false
-    end
-
-    def exists?(key)
-      with_redis do |redis|
-        redis.exists?(key)
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to check existence of key '#{key}' in Redis: #{e.message}")
-      false
-    end
-
-    # Get Redis info and statistics
-    def info
-      with_redis do |redis|
-        redis.info
-      end
-    rescue StandardError => e
-      Rails.logger.error("Failed to get Redis info: #{e.message}")
-      {}
-    end
-
-    # Health check
-    def healthy?
-      ping && with_redis { |redis| redis.dbsize >= 0 }
-    rescue StandardError
-      false
     end
 
     private
@@ -279,6 +182,7 @@ class RedisService
     end
 
     # Serialize values for storage
+    # (kept for future use if set() is reintroduced)
     def serialize_value(value)
       case value
       when String

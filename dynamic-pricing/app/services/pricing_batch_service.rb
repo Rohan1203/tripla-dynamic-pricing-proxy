@@ -92,22 +92,48 @@ class PricingBatchService
     max_retries = retry_count.to_i
     base_backoff = retry_base_backoff.to_i
     multiplier = retry_multiplier.to_i
-    max_backoff = retry_max_backoff.to_i
 
-    retries = 0
-    begin
-      http.request(request)
-    rescue StandardError => e
-      if retries < max_retries
-        wait_time = [base_backoff * (multiplier**retries), max_backoff].min
-        self.logger.error("Request failed: #{e.message}. Retrying in #{wait_time} seconds (Attempt #{retries + 1}/#{max_retries})")
-        sleep wait_time
-        retries += 1
-        retry
-      else
-        self.logger.error("Failed to connect to rate API after #{max_retries} retries: #{e.message}")
-        nil
+    # Compute a longer backoff between cycles of attempts. After performing
+    # `max_retries` attempts (with exponential backoff within the cycle), we
+    # wait this cycle backoff and then perform another cycle. This repeats
+    # continuously until a successful 200 response is received.
+    cycle_backoff = base_backoff * (multiplier**[max_retries, 1].max)
+
+    loop do
+      attempts = 0
+
+      while attempts < max_retries
+        begin
+          resp = http.request(request)
+
+          if resp && resp.code.to_i == 200
+            return resp
+          end
+
+          attempts += 1
+          if attempts < max_retries
+            wait_time = base_backoff * (multiplier**(attempts - 1))
+            self.logger.error("API request returned #{resp&.code}. Retrying in #{wait_time} seconds (Attempt #{attempts}/#{max_retries})")
+            sleep wait_time
+            next
+          else
+            self.logger.error("Cycle of #{max_retries} attempts failed (last status #{resp&.code}). Backing off #{cycle_backoff} seconds before next cycle")
+          end
+
+        rescue StandardError => e
+          attempts += 1
+          if attempts < max_retries
+            wait_time = base_backoff * (multiplier**(attempts - 1))
+            self.logger.error("Request failed: #{e.message}. Retrying in #{wait_time} seconds (Attempt #{attempts}/#{max_retries})")
+            sleep wait_time
+            next
+          else
+            self.logger.error("Cycle of #{max_retries} attempts failed due to errors: #{e.message}. Backing off #{cycle_backoff} seconds before next cycle")
+          end
+        end
       end
+
+      sleep cycle_backoff
     end
   end
 

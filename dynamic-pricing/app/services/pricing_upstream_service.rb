@@ -47,6 +47,20 @@ class PricingUpstreamService
     host  = Rails.application.config.rate_api[:host]
     token = Rails.application.config.rate_api[:token]
 
+    # Circuit breaker integration (use Helpers::CircuitBreaker.for)
+    cb = Helpers::CircuitBreaker.for(
+      name: 'pricing_upstream',
+      threshold: (Rails.application.config.respond_to?(:upstream_health_check) && Rails.application.config.upstream_health_check[:failure_threshold]) || 5,
+      open_ttl: (Rails.application.config.respond_to?(:upstream_health_check) && Rails.application.config.upstream_health_check[:open_ttl_seconds]) || 60,
+      probe_url: Rails.application.config.rate_api[:host],
+      probe_interval: (Rails.application.config.respond_to?(:upstream_health_check) && Rails.application.config.upstream_health_check[:check_interval_seconds]) || 10
+    )
+
+    unless cb.allow?
+      Rails.logger.warn("[pricing] Circuit open for upstream requests; skipping HTTP call")
+      return nil
+    end
+
     if host.nil? || host.empty?
       Rails.logger.error("[pricing] PricingUpstreamService: rate_api.host is not configured")
       return nil
@@ -61,9 +75,16 @@ class PricingUpstreamService
 
     Rails.logger.info("[pricing] PricingUpstreamService sending request to #{host} for #{@attributes.size} attribute set(s)")
 
-    http.request(req)
+    resp = http.request(req)
+    if resp && resp.code.to_i >= 200 && resp.code.to_i < 500
+      cb.record_success
+    else
+      cb.record_failure
+    end
+    resp
   rescue StandardError => e
     Rails.logger.error("[pricing] PricingUpstreamService HTTP error: #{e.class} - #{e.message}")
+    cb.record_failure rescue nil
     nil
   end
 

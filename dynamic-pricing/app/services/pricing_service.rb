@@ -55,9 +55,13 @@ class PricingService
         end
 
         # 2) DB (fresh within window)
+        # Compute DB freshness window here (class context) instead of calling instance helper
+        db_max_age = (Rails.application.config.respond_to?(:pricing) && Rails.application.config.pricing[:db_max_age_seconds]).to_i
+        db_max_age = 30 if db_max_age.zero?
+
         db_record = HistoricalRate
           .where(period: period, hotel: hotel, room: room)
-          .where("retrieved_at >= ?", Time.current - db_max_age_seconds)
+          .where("retrieved_at >= ?", Time.current - db_max_age)
           .order(retrieved_at: :desc)
           .first
 

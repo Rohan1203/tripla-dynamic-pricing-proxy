@@ -8,7 +8,10 @@ FROM ruby:$RUBY_VERSION-alpine
 WORKDIR /rails
 
 # Set development environment
-ENV RAILS_ENV="development" \
+ENV RAILS_ENV="production" \
+    RATE_API="http://rate-api:8080/pricing" \
+    REDIS_HOST="redis" \
+    REDIS_PASSWORD="04aa6f42aa03f220c2ae9a276cd68c62" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT=""
 

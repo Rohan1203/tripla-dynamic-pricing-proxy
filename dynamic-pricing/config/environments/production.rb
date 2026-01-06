@@ -1,6 +1,11 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Ensure Redis password for production fallback (override via ENV in real deployments)
+  ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
+  # Temporary hardcoded secret_key_base for local/CI production runs.
+  # Replace with secure credentials in real deployments.
+  ENV['SECRET_KEY_BASE'] ||= '4e2f1a7b9c3d5f6a8b0c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5'
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Code is not reloaded between requests.
@@ -39,7 +44,7 @@ Rails.application.configure do
   # config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  config.force_ssl = false
 
   # Log to file
   log_file = File.open(Rails.root.join("log/application.log"), "a")
@@ -95,15 +100,15 @@ Rails.application.configure do
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   # Rate retriever configuration
-  config.rate_api = { host: "http://localhost:8080/pricing", token: "" }
-  config.retry = { count: 3, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 30 }
+  config.rate_api = { host: ENV.fetch('RATE_API',"http://localhost:8080/pricing"), token: "04aa6f42aa03f220c2ae9a276cd68c62" }
+  config.retry = { count: 3, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 60 }
   config.batch = {
     interval: ENV.fetch('BATCH_INTERVAL', 5).to_i,
     failure_interval: ENV.fetch('BATCH_FAILURE_INTERVAL', 1).to_i
   }
 
   # Upstream health check configuration
-  config.upstream_health_check = { check_timeout_seconds: 5, check_interval_seconds: 30 }
+  config.upstream_health_check = { check_timeout_seconds: 5, check_interval_seconds: 15, path: '/' }
 
   # Pricing behaviour tuning (can be overridden via environment variables if needed)
   config.pricing = {
