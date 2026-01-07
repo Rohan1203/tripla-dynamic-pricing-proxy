@@ -15,7 +15,6 @@ ENV RAILS_ENV="production" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT=""
 
-# Install packages needed for development
 RUN apk add --no-cache \
     build-base \
     git \
@@ -25,10 +24,12 @@ RUN apk add --no-cache \
     sqlite \
     tzdata
 
-# Install application gems
-COPY Gemfile Gemfile.lock /rails/
-RUN bundle install --gemfile=/rails/Gemfile
 
-# Start the server by default, this can be overwritten at runtime
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+COPY . .
+
 EXPOSE 3000
-CMD ["sh", "-c", "./bin/rails db:prepare && ./bin/rails server -b 0.0.0.0"]
+
+CMD ["sh", "-c", "bin/rails db:prepare && bin/rails server -b 0.0.0.0"]

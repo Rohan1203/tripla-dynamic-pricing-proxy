@@ -3,6 +3,8 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Ensure Redis password for production fallback (override via ENV in real deployments)
   ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
+  ENV['REDIS_HOST'] ||= 'redis'
+
   # Temporary hardcoded secret_key_base for local/CI production runs.
   # Replace with secure credentials in real deployments.
   ENV['SECRET_KEY_BASE'] ||= '4e2f1a7b9c3d5f6a8b0c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5'

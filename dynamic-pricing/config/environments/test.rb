@@ -8,6 +8,8 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Ensure Redis password for test environment (used by config/redis.yml)
   ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
+  ENV['REDIS_HOST'] ||= 'localhost'
+
   # Settings specified here will take precedence over those in config/application.rb.
 
   # While tests run files are not watched, reloading is not necessary.
