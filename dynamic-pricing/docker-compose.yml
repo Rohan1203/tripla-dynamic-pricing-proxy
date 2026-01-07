@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  dynamic-pricing-wrapper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dynamic-pricing-wrapper
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: production
+      RATE_API: http://rate-api:8080/pricing
+      REDIS_HOST: redis
+      REDIS_PASSWORD: "04aa6f42aa03f220c2ae9a276cd68c62"
+    depends_on:
+      - rate-api
+      - redis
+    restart: unless-stopped
+    networks:
+      - pricing_network
+
+  rate-api:
+    image: tripladev/rate-api
+    container_name: rate-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+      # Adjust these if your app expects different env names
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "04aa6f42aa03f220c2ae9a276cd68c62"
+    restart: unless-stopped
+    networks:
+      - pricing_network
+
+  redis:
+    image: redis:7.2
+    container_name: redis
+    command: >
+      redis-server
+      --requirepass "04aa6f42aa03f220c2ae9a276cd68c62"
+      --appendonly yes
+    ports:
+      - "6379:6379" # optional; remove if Redis should not be exposed
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - pricing_network
+
+  redis-ui:
+    image: redis/redisinsight:latest
+    container_name: redis-ui
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    volumes:
+      - redisinsight-data:/db
+    restart: unless-stopped
+    networks:
+      - pricing_network
+
+volumes:
+  redis-data:
+  redisinsight-data:
+
+networks:
+  pricing_network:
+    driver: bridge

@@ -1,6 +1,9 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Ensure Redis password for local development (used by config/redis.yml)
+  ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
+  ENV['REDIS_HOST'] ||= 'localhost'
   # Settings specified here will take precedence over those in config/application.rb.
 
   # In the development environment your application's code is reloaded any time
@@ -60,4 +63,48 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Optional: reduce dev log volume in console
+  # 
+  config.log_level = :info
+  config.active_record.logger = nil
+
+  log_file = File.open(Rails.root.join("log/application_#{Rails.env}.log"), "a")
+  log_file.sync = true
+  config.logger = ActiveSupport::Logger.new(log_file)
+  config.logger.formatter = proc do |severity, datetime, progname, msg|
+    caller_info = caller.find { |c| c.include?('/app/') }
+    file = caller_info ? File.basename(caller_info.split(':').first) : nil
+    line = caller_info ? caller_info[/:\d+:/][1..-2] : nil
+    {
+      time: datetime.to_s,
+      level: severity,
+      logger_name: Rails.env,
+      file: file,
+      line: line,
+      thread_id: Thread.current.object_id,
+      message: msg
+    }.to_json + "\n"
+  end
+
+  # Rate retriever configuration
+  config.rate_api = { host: "http://localhost:8080/pricing", token: "04aa6f42aa03f220c2ae9a276cd68c62" }
+  config.retry = { count: 3, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 30 }
+  config.batch = { interval: 5, failure_interval: 1 } #minute
+
+  # Pricing behaviour tuning
+  config.pricing = {
+    db_max_age_seconds:      30, # how long historical DB data is considered fresh
+    refresh_window_seconds:   5  # coalescing window for upstream refreshes
+  }
+
+  config.upstream_health_check = { check_timeout_seconds: 30, check_interval_seconds: 15, path: '/' }
+
+  # Redis TTL configuration (in seconds)
+  config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds for rates, 1 hour default
+
+
+
 end
+
+

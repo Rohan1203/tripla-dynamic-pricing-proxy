@@ -17,9 +17,14 @@ jobs:
     - name: Build Docker image
       run: docker build -t interview-app .
     - name: Run the container
-      run: docker run -d -p 3000:3000 -v $(pwd):/rails --name interview-dev interview-app
+      run: docker run -d -p 3000:3000 --name interview-dev interview-app
+    - name: Show Rails production logs
+      run:  docker exec interview-dev sh -c "ls -l log && tail -n 200 tail -n 200 /rails/log/application.log || true"
     - name: Run all tests
-      run: docker container exec interview-dev ./bin/rails test
+      run: docker container exec interview-dev bin/rails test
+    - name: Check pricing route
+      run: |
+        docker exec interview-dev bin/rails routes | grep pricing
     - name: Test API endpoint returns 200
       run: |
         echo "Testing API endpoint..."

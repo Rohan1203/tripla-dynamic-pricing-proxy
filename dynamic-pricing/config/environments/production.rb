@@ -1,6 +1,13 @@
 require "active_support/core_ext/integer/time"
 
 Rails.application.configure do
+  # Ensure Redis password for production fallback (override via ENV in real deployments)
+  ENV['REDIS_PASSWORD'] ||= '04aa6f42aa03f220c2ae9a276cd68c62'
+  ENV['REDIS_HOST'] ||= 'redis'
+
+  # Temporary hardcoded secret_key_base for local/CI production runs.
+  # Replace with secure credentials in real deployments.
+  ENV['SECRET_KEY_BASE'] ||= '4e2f1a7b9c3d5f6a8b0c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5'
   # Settings specified here will take precedence over those in config/application.rb.
 
   # Code is not reloaded between requests.
@@ -39,12 +46,27 @@ Rails.application.configure do
   # config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = true
+  config.force_ssl = false
 
-  # Log to STDOUT by default
-  config.logger = ActiveSupport::Logger.new(STDOUT)
-    .tap  { |logger| logger.formatter = ::Logger::Formatter.new }
-    .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
+  # Log to file
+  log_file = File.open(Rails.root.join("log/application.log"), "a")
+  log_file.sync = true
+  config.logger = ActiveSupport::Logger.new(log_file)
+  config.logger.formatter = proc do |severity, datetime, progname, msg|
+    caller_info = caller.find { |c| c.include?('/app/') }
+    file = caller_info ? File.basename(caller_info.split(':').first) : nil
+    line = caller_info ? caller_info[/:\d+:/][1..-2] : nil
+    {
+      time: datetime.to_s,
+      level: severity,
+      logger_name: Rails.env,
+      file: file,
+      line: line,
+      thread_id: Thread.current.object_id,
+      message: msg
+    }.to_json + "\n"
+  end
+  config.logger = ActiveSupport::TaggedLogging.new(config.logger)
 
   # Prepend all log lines with the following tags.
   config.log_tags = [ :request_id ]
@@ -78,4 +100,25 @@ Rails.application.configure do
   # ]
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  # Rate retriever configuration
+  config.rate_api = { host: ENV.fetch('RATE_API',"http://localhost:8080/pricing"), token: "04aa6f42aa03f220c2ae9a276cd68c62" }
+  config.retry = { count: 3, base_backoff_seconds: 1, backoff_multiplier: 2, max_backoff_seconds: 60 }
+  config.batch = {
+    interval: ENV.fetch('BATCH_INTERVAL', 5).to_i,
+    failure_interval: ENV.fetch('BATCH_FAILURE_INTERVAL', 1).to_i
+  }
+
+  # Upstream health check configuration
+  config.upstream_health_check = { check_timeout_seconds: 5, check_interval_seconds: 15, path: '/' }
+
+  # Pricing behaviour tuning (can be overridden via environment variables if needed)
+  config.pricing = {
+    db_max_age_seconds:      30,
+    refresh_window_seconds:  5
+  }
+
+  # Redis TTL configuration (in seconds)2
+  config.redis_ttl = { rate: 310, default: 3600 }  # 5 minutes 10 seconds  for rates, 1 hour default
+
 end

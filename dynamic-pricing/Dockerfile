@@ -8,11 +8,14 @@ FROM ruby:$RUBY_VERSION-alpine
 WORKDIR /rails
 
 # Set development environment
-ENV RAILS_ENV="development" \
+ENV RAILS_ENV="production" \
+    RATE_API="http://rate-api:8080/pricing" \
+    REDIS_HOST="redis" \
+    REDIS_PASSWORD="04aa6f42aa03f220c2ae9a276cd68c62" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT=""
+    BUNDLE_WITHOUT="" \
+    BUNDLE_FORCE_RUBY_PLATFORM=true
 
-# Install packages needed for development
 RUN apk add --no-cache \
     build-base \
     git \
@@ -22,10 +25,12 @@ RUN apk add --no-cache \
     sqlite \
     tzdata
 
-# Install application gems
-COPY Gemfile Gemfile.lock /rails/
-RUN bundle install --gemfile=/rails/Gemfile
 
-# Start the server by default, this can be overwritten at runtime
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+COPY . .
+
 EXPOSE 3000
-CMD ["sh", "-c", "./bin/rails db:prepare && ./bin/rails server -b 0.0.0.0"]
+
+CMD ["sh", "-c", "bin/rails db:prepare && bin/rails server -b 0.0.0.0"]
