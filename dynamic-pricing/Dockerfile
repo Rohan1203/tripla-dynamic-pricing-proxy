@@ -13,7 +13,8 @@ ENV RAILS_ENV="production" \
     REDIS_HOST="redis" \
     REDIS_PASSWORD="04aa6f42aa03f220c2ae9a276cd68c62" \
     BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT=""
+    BUNDLE_WITHOUT="" \
+    BUNDLE_FORCE_RUBY_PLATFORM=true
 
 RUN apk add --no-cache \
     build-base \

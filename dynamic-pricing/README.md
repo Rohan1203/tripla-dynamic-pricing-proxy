@@ -1,7 +1,11 @@
 # Dynamic Pricing Wrapper API
 
 ## Features 
-    - Docker compose for /pricing service and redis and redis-ui
+    - Docker compose for all service Scaffolded together (*mandatory to start) 
+      - /pricing service
+      - redis
+      - redis-ui
+      - dynamic-pricing-wrapper (actual application)
     - Batch for the background bulk fetch from the /pricing service to minimize the api calls
     - Caching with Redis
         - bulk push to redis from batch
