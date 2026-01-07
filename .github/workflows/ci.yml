@@ -21,7 +21,7 @@ jobs:
     - name: Show Rails production logs
       run: |
         echo "===== Rails production.log ====="
-        docker exec interview-dev sh -c "ls -l log && tail -n 200 log/production.log || true"
+        docker exec interview-dev sh -c "ls -l log && tail -n 200 log/application.log || true"
     - name: Run all tests
       run: docker container exec interview-dev bin/rails test
     - name: Test API endpoint returns 200
