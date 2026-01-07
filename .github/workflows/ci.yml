@@ -25,8 +25,6 @@ jobs:
     - name: Check pricing route
       run: |
         docker exec interview-dev bin/rails routes | grep pricing
-    - name: Run the container
-      run: docker run -d -p 3000:3000 --name interview-dev interview-app
     - name: Test API endpoint returns 200
       run: |
         echo "Testing API endpoint..."
