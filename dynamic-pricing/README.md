@@ -19,7 +19,14 @@
 flow diagram![alt text](image.png)
 
 
-## Start the application
+## Start the application (by using docker-compose)(*recomended)
+```bash
+# it uses production by default
+# I have disabled the SSL to test with http
+$ docker compose up -d --build #mandatory to run redis, pricing-service and the dynamic-pricing-wrapper
+```
+
+## Start the application (by using rail native command)
 ```bash
 $ docker compose up -d --build #mandatory to run redis and pricing-service
 $ bundel install
@@ -31,9 +38,36 @@ $ RAILS_ENV=production bin/rails db:create db:migrate db:seed
 $ RAILS_ENV=production bin/rails server -b 0.0.0.0 -p 3000
 ```
 
-## API Usage
+## API
+
 ### Endpoint: /pricing
-### Request body (json):
+### Method: GET
+
+## Usage
+### Single Rate fetch
+
+#### Request
+
+```bash
+http://localhost:3000/pricing?period=Winter&hotel=FloatingPointResort&room=SingletonRoom
+```
+
+#### Expected Response
+```json
+{
+  "period": "Winter",
+  "hotel": "FloatingPointResort",
+  "room": "SingletonRoom",
+  "rate": "73200",
+  "timestamp": "2026-01-07T05:55:46Z"
+}
+```
+### Multi-rate fetch
+#### Request
+```bash
+http://localhost:3000/pricing
+```
+#### Request body (json):
 ```json
 {
   "rates": [
@@ -60,7 +94,7 @@ $ RAILS_ENV=production bin/rails server -b 0.0.0.0 -p 3000
   ]
 }
 ```
-### Expected Response:
+#### Expected Response:
 ```bash
 {
     "rates": [
